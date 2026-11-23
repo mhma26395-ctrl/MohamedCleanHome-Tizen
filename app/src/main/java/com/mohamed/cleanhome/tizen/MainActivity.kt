@@ -48,9 +48,9 @@ class MainActivity : Activity() {
 
         val header = card()
         header.addView(label("Mohamed CleanHome", 24f, textColor, true))
-        header.addView(label("Tizen • Phase 1 diagnostics", 14f, muted))
+        header.addView(label("Samsung TV network control discovery", 14f, muted))
         addGap(header,8)
-        header.addView(label("Experimental network diagnostics only. No Home changes are made.", 13f, muted))
+        header.addView(label("Checking Samsung TV control endpoints. No TV settings are changed.", 13f, muted))
         root.addView(header); addGap(root)
 
         val connection = card()
@@ -71,6 +71,8 @@ class MainActivity : Activity() {
             setOnClickListener { showDeveloperSetup() }
         }
         connection.addView(setupButton)
+        val samsungButton = Button(this).apply { text = "Check Samsung control ports"; setOnClickListener { samsungPorts() } }
+        connection.addView(samsungButton)
         status = label("Status: Ready", 15f, textColor, true)
         status.setPadding(0,dp(12),0,dp(4))
         connection.addView(status)
@@ -83,10 +85,10 @@ class MainActivity : Activity() {
         root.addView(details); addGap(root)
 
         val tools = card()
-        tools.addView(label("EXPERIMENTAL TEST", 13f, accent, true))
+        tools.addView(label("NETWORK & TV CONTROL", 13f, accent, true))
         addGap(tools,6)
         sdbButton = Button(this).apply {
-            text = "Try read-only SDB handshake"
+            text = "SDB handshake (legacy test)"
             setOnClickListener { sdbProbe() }
         }
         tools.addView(sdbButton)
@@ -147,7 +149,7 @@ Important:
             .setMessage(guide).setPositiveButton("Close", null).show()
     }
 
-    private fun capabilityProbe() {
+    private fun samsungPorts() {\n        val host = ipField.text.toString().trim()\n        if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }\n        status.text = "Status: Checking Samsung endpoints…"\n        log.text = "Testing common Samsung TV control ports."\n        executor.execute {\n            val ports = listOf(8001, 8002, 7676, 26101)\n            val lines = ports.map { port ->\n                val result = try { Socket().use { it.connect(InetSocketAddress(host, port), 1800); "OPEN" } } catch (e: Exception) { "closed/unconfirmed" }\n                "$port: $result"\n            }\n            runOnUiThread { status.text = "Status: Endpoint scan complete"; log.text = "Samsung endpoint scan\\n${lines.joinToString("\\n")}\\nPorts alone do not prove control compatibility." }\n        }\n    }\n\n    private fun capabilityProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         status.text = "Status: Reading read-only capabilities…"

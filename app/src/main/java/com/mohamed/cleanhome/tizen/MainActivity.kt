@@ -190,7 +190,7 @@ Important:
                     status.text = "Status: WebSocket connection established"
                     log.text = "SUCCESS: Samsung remote WebSocket opened on port 8001.\nHTTP status: ${response.code}\nNo remote key or TV command was sent. This confirms protocol access only."
                 }
-                webSocket.close(1000, "Diagnostic complete")
+                webSocket.cancel()
                 client.dispatcher.executorService.shutdown()
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {

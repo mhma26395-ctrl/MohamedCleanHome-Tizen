@@ -2,6 +2,8 @@ package com.mohamed.cleanhome.tizen
 
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

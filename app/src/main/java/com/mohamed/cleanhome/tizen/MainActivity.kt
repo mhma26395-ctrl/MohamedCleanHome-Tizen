@@ -9,7 +9,7 @@ import android.widget.*
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.util.concurrent.Executors
+import java.util.concurrent.Executors\nimport okhttp3.OkHttpClient\nimport okhttp3.Request\nimport okhttp3.WebSocket\nimport okhttp3.WebSocketListener
 
 class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
@@ -169,7 +169,34 @@ Important:
         }
     }
 
-    private fun capabilityProbe() {
+
+    private fun websocketProbe() {
+        val host = ipField.text.toString().trim()
+        if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
+        status.text = "Status: Testing WebSocket…"
+        log.text = "Opening Samsung remote-control WebSocket on port 8001 (no key command sent)."
+        val encodedName = android.util.Base64.encodeToString("MohamedCleanHome".toByteArray(), android.util.Base64.NO_WRAP)
+        val request = Request.Builder().url("ws://$host:8001/api/v2/channels/samsung.remote.control?name=$encodedName").build()
+        val client = OkHttpClient()
+        client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+                runOnUiThread {
+                    status.text = "Status: WebSocket connection established"
+                    log.text = "SUCCESS: Samsung remote WebSocket opened on port 8001.\nHTTP status: ${response.code}\nNo remote key or TV command was sent. This confirms protocol access only."
+                }
+                webSocket.close(1000, "Diagnostic complete")
+                client.dispatcher.executorService.shutdown()
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
+                runOnUiThread {
+                    status.text = "Status: WebSocket test failed"
+                    log.text = "WebSocket failed: ${t.javaClass.simpleName}: ${t.message ?: "no details"}\nHTTP status: ${response?.code ?: "unavailable"}\nCheck TV permissions, network, and model/firmware."
+                }
+                client.dispatcher.executorService.shutdown()
+            }
+        })
+    }
+\n    private fun capabilityProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         status.text = "Status: Reading read-only capabilities…"

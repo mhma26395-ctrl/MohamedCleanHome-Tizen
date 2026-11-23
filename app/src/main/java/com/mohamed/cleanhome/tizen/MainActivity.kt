@@ -200,7 +200,8 @@ Important:
             }
         })
     }
-\n    private fun capabilityProbe() {
+
+    private fun capabilityProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         status.text = "Status: Reading read-only capabilities…"

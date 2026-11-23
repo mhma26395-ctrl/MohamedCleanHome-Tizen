@@ -79,7 +79,7 @@ class MainActivity : Activity() {
         val details = card()
         details.addView(label("WHAT THIS CHECKS", 13f, accent, true))
         addGap(details,8)
-        details.addView(label("• IP/host resolution\n• Basic reachability attempt\n• TCP port 26101 check (not an SDB session)\n• No pairing, commands, or system writes", 14f, muted))
+        details.addView(label("• IP/host resolution\n• Basic reachability attempt\n• TCP port 26101 reachability\n• SDB handshake response validation\n• No authentication or TV commands", 14f, muted))
         root.addView(details); addGap(root)
 
         val tools = card()
@@ -186,7 +186,7 @@ Important:
                     lines += when (sdb.outcome) {
                         "CNXN" -> "Interpretation: protocol handshake response observed. Full session/authentication is not implemented."
                         "AUTH" -> "Interpretation: TV appears to request authentication; this build does not authenticate."
-                        "NO_RESPONSE", "FAILED" -> "Interpretation: TCP access may exist, but protocol response was not established. Check Developer Mode/host IP and model/firmware support."
+                        "RESET" -> "Interpretation: peer reset the socket after the handshake attempt. Verify Developer Mode and protocol compatibility."\n                        "TIMEOUT" -> "Interpretation: no complete protocol reply arrived before timeout."\n                        "NO_RESPONSE" -> "Interpretation: connection opened, but no complete protocol header arrived."\n                        "INVALID_HEADER", "INVALID_LENGTH", "CHECKSUM_MISMATCH", "INCOMPLETE" -> "Interpretation: reply data was received but failed protocol validation."
                         else -> "Interpretation: response is not yet verified as a usable SDB session."
                     }
                 } else {
@@ -197,7 +197,7 @@ Important:
             } catch (e: Exception) {
                 lines += "Host check failed: ${e.javaClass.simpleName}: ${e.message ?: "no details"}"
             }
-            val result = lines.joinToString("\\n")
+            val result = lines.joinToString("\n")
             runOnUiThread {
                 status.text = "Status: Diagnostics complete"
                 log.text = result

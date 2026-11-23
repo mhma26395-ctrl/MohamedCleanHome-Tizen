@@ -10,7 +10,10 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.Executors
-import okhttp3.OkHttpClient\nimport okhttp3.Request\nimport okhttp3.WebSocket\nimport okhttp3.WebSocketListener
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 
 class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()

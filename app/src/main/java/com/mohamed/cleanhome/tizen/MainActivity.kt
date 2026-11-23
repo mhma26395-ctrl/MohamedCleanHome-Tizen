@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -18,84 +19,109 @@ class MainActivity : Activity() {
     private lateinit var probeButton: Button
     private lateinit var sdbButton: Button
     private lateinit var recoveryButton: Button
-    private lateinit var profileButton: Button
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        buildUi()
+    private val bg = 0xff101820.toInt()
+    private val panel = 0xff1b2833.toInt()
+    private val textColor = 0xfff3f7fa.toInt()
+    private val muted = 0xffb7c7d3.toInt()
+    private val accent = 0xff62c7b4.toInt()
+
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); buildUi() }
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun card(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(16), dp(14), dp(16), dp(14))
+        setBackgroundColor(panel)
     }
+    private fun label(value: String, size: Float, color: Int = textColor, bold: Boolean = false) = TextView(this).apply {
+        text = value; textSize = size; setTextColor(color)
+        if (bold) setTypeface(null, android.graphics.Typeface.BOLD)
+    }
+    private fun addGap(parent: LinearLayout, height: Int = 12) { parent.addView(View(this), LinearLayout.LayoutParams(1, dp(height))) }
 
     private fun buildUi() {
         val prefs = getSharedPreferences("cleanhome", MODE_PRIVATE)
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(28, 24, 28, 24)
-            setBackgroundColor(0xff101820.toInt())
-        }
-        val title = TextView(this).apply {
-            text = "Mohamed CleanHome – Tizen"; textSize = 26f
-            setTextColor(0xffffffff.toInt()); gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 6)
-        }
-        val subtitle = TextView(this).apply {
-            text = "Samsung Tizen • Phase 1 diagnostics"
-            textSize = 15f; setTextColor(0xffa9c0d0.toInt())
-            gravity = Gravity.CENTER; setPadding(0, 0, 0, 24)
-        }
+        val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bg); setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val scroll = ScrollView(this).apply { isFillViewport = true }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0,0,0,dp(8)) }
+
+        val header = card()
+        header.addView(label("Mohamed CleanHome", 24f, textColor, true))
+        header.addView(label("Tizen • Phase 1 diagnostics", 14f, muted))
+        addGap(header,8)
+        header.addView(label("Experimental network diagnostics only. No Home changes are made.", 13f, muted))
+        root.addView(header); addGap(root)
+
+        val connection = card()
+        connection.addView(label("TV CONNECTION", 13f, accent, true))
+        addGap(connection,6)
         ipField = EditText(this).apply {
-            hint = "TV IP address (e.g. 192.168.1.50)"
-            setSingleLine(); setTextColor(-1); setHintTextColor(0xff9aaab6.toInt())
+            hint = "TV IP address (192.168.1.50)"
+            setSingleLine(); setTextColor(textColor); setHintTextColor(muted)
             inputType = android.text.InputType.TYPE_CLASS_TEXT
             setText(prefs.getString("last_ip", "") ?: "")
+            textSize = 16f
         }
-        probeButton = Button(this).apply {
-            text = "Run connection checks"
-            setOnClickListener { probe() }
-        }
-        status = TextView(this).apply {
-            text = "Status: Not connected"; setTextColor(0xffd4e4ef.toInt())
-            textSize = 16f; setPadding(0, 18, 0, 12)
-        }
-        val checks = TextView(this).apply {
-            text = "Checks in this build:\n• Host/IP resolution\n• Basic reachability attempt\n• TCP port 26101 check (not an SDB session)\n• No pairing, commands, or system writes"
-            setTextColor(0xffc4d4df.toInt()); textSize = 14f; setPadding(0, 8, 0, 16)
-        }
-        val recoveryTitle = TextView(this).apply {
-            text = "Original Tizen Home recovery requirement"
-            textSize = 18f; setTextColor(0xff8fd3ff.toInt()); setPadding(0, 12, 0, 6)
-        }
-        val recoveryInfo = TextView(this).apply {
-            text = "The app is designed to include a clear return-to-original-Home option. It remains disabled until the supported recovery method is validated for a specific TV/firmware profile. No Home settings are changed in Phase 1."
-            textSize = 14f; setTextColor(0xffd4e4ef.toInt()); setPadding(0, 4, 0, 12)
-        }
+        connection.addView(ipField)
+        probeButton = Button(this).apply { text = "Run connection checks"; setOnClickListener { probe() } }
+        connection.addView(probeButton)
+        status = label("Status: Ready", 15f, textColor, true)
+        status.setPadding(0,dp(12),0,dp(4))
+        connection.addView(status)
+        root.addView(connection); addGap(root)
+
+        val details = card()
+        details.addView(label("WHAT THIS CHECKS", 13f, accent, true))
+        addGap(details,8)
+        details.addView(label("• IP/host resolution\n• Basic reachability attempt\n• TCP port 26101 check (not an SDB session)\n• No pairing, commands, or system writes", 14f, muted))
+        root.addView(details); addGap(root)
+
+        val tools = card()
+        tools.addView(label("EXPERIMENTAL TEST", 13f, accent, true))
+        addGap(tools,6)
         sdbButton = Button(this).apply {
-            text = "Try experimental SDB handshake (read-only)"
+            text = "Try read-only SDB handshake"
             setOnClickListener { sdbProbe() }
         }
-        recoveryButton = Button(this).apply {
-            text = "Return to original Tizen Home — unavailable in Phase 1"
-            isEnabled = false
-        }
-        profileButton = Button(this).apply {
+        tools.addView(sdbButton)
+        profileButtonSetup(tools)
+        root.addView(tools); addGap(root)
+
+        val recovery = card()
+        recovery.addView(label("SAFE RETURN TO ORIGINAL HOME", 15f, textColor, true))
+        addGap(recovery,6)
+        recovery.addView(label("The return-to-original-Home function is not enabled. A recovery method must be verified on the exact TV model and firmware before any Home modification.", 14f, muted))
+        recoveryButton = Button(this).apply { text = "Original Tizen Home recovery — not yet available"; isEnabled = false }
+        recovery.addView(recoveryButton)
+        root.addView(recovery); addGap(root)
+
+        val output = card()
+        output.addView(label("DIAGNOSTIC RESULTS", 13f, accent, true))
+        addGap(output,6)
+        log = label("Ready. Run a connection check to view results.", 14f, muted)
+        output.addView(log)
+        root.addView(output)
+
+        scroll.addView(root)
+        page.addView(scroll, LinearLayout.LayoutParams(-1, -1))
+        setContentView(page)
+    }
+
+    private fun profileButtonSetup(parent: LinearLayout) {
+        val button = Button(this).apply {
             text = "Compatibility & recovery checklist"
             setOnClickListener { showCompatibilityChecklist() }
         }
-        log = TextView(this).apply {
-            text = "Diagnostic log\nReady."
-            setTextColor(0xffc2d2de.toInt()); textSize = 14f; setPadding(0, 18, 0, 0)
-        }
-        root.addView(title); root.addView(subtitle); root.addView(ipField)
-        root.addView(probeButton); root.addView(status); root.addView(checks)
-        root.addView(sdbButton); root.addView(profileButton); root.addView(recoveryTitle); root.addView(recoveryInfo); root.addView(recoveryButton); root.addView(log)
-        setContentView(root)
+        parent.addView(button)
     }
 
     private fun sdbProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         sdbButton.isEnabled = false
-        status.text = "Status: Attempting SDB handshake…"
-        log.text = "Diagnostic log\nSending only an experimental CNXN handshake."
+        status.text = "Status: Attempting handshake…"
+        log.text = "Sending only an experimental CNXN handshake."
         executor.execute {
             val result = SdbHandshakeProbe.probe(host)
             runOnUiThread {
@@ -111,9 +137,8 @@ class MainActivity : Activity() {
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         probeButton.isEnabled = false
         status.text = "Status: Checking…"
-        val prefs = getSharedPreferences("cleanhome", MODE_PRIVATE)
-        prefs.edit().putString("last_ip", host).apply()
-        log.text = "Diagnostic log\nChecking $host"
+        getSharedPreferences("cleanhome", MODE_PRIVATE).edit().putString("last_ip", host).apply()
+        log.text = "Checking $host…"
         executor.execute {
             val lines = mutableListOf<String>()
             try {
@@ -122,21 +147,15 @@ class MainActivity : Activity() {
                 try { lines += "Basic reachability: ${address.isReachable(2500)} (not definitive)" }
                 catch (e: Exception) { lines += "Reachability check: ${e.javaClass.simpleName}" }
                 var portOpen = false
-                try {
-                    Socket().use { it.connect(InetSocketAddress(address, 26101), 2500); portOpen = true }
-                    lines += "TCP 26101: connection accepted"
-                } catch (e: Exception) {
-                    lines += "TCP 26101: not confirmed (${e.javaClass.simpleName})"
-                }
-                lines += if (portOpen) "Interpretation: a TCP connection was accepted; this does not establish SDB protocol support." else "Interpretation: no TCP connection was confirmed. TV/network/firewall/protocol status remains unknown."
+                try { Socket().use { it.connect(InetSocketAddress(address, 26101), 2500); portOpen = true }; lines += "TCP 26101: connection accepted" }
+                catch (e: Exception) { lines += "TCP 26101: not confirmed (${e.javaClass.simpleName})" }
+                lines += if (portOpen) "A TCP connection was accepted; this does not confirm SDB protocol support." else "No TCP connection was confirmed. Network/protocol status remains unknown."
                 lines += "No pairing, SDB commands, settings reads, or writes were attempted."
-            } catch (e: Exception) {
-                lines += "Host check failed: ${e.javaClass.simpleName}: ${e.message ?: "no details"}"
-            }
+            } catch (e: Exception) { lines += "Host check failed: ${e.javaClass.simpleName}: ${e.message ?: "no details"}" }
             val result = lines.joinToString("\n")
             runOnUiThread {
                 status.text = "Status: Checks complete — no TV session established"
-                log.text = "Diagnostic log\n$result"
+                log.text = result
                 probeButton.isEnabled = true
             }
         }
@@ -152,32 +171,20 @@ Evidence required before any Home change:
 [ ] Firmware/version confirmed
 [ ] Architecture/runtime verified
 [ ] Read-only native inspection reviewed
-[ ] Original Home/startup state recorded on this exact TV
+[ ] Original Home/startup state recorded
 [ ] Restoration to Samsung Tizen Home rehearsed successfully
-[ ] Physical Home-change rehearsal completed and independently reviewed
+[ ] Home-change rehearsal completed and independently reviewed
 
-STATUS: BLOCKED — checklist items are not verified by this app.
+STATUS: BLOCKED — checklist items are not verified.
 A network connection or SDB handshake is not compatibility approval.
 No Home settings have been changed by this app.
-
-Recovery is mandatory and must be validated for the exact TV/firmware.
-"""
-        val box = TextView(this).apply { text = report; textSize = 14f; setPadding(24,24,24,24) }
-        AlertDialog.Builder(this)
-            .setTitle("Compatibility gate")
-            .setMessage(report)
+Recovery must be validated for the exact TV/firmware."""
+        AlertDialog.Builder(this).setTitle("Compatibility gate").setMessage(report)
             .setPositiveButton("Share report") { _, _ ->
-                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, report)
-                }
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, report) }
                 startActivity(android.content.Intent.createChooser(send, "Share diagnostic checklist"))
-            }
-            .setNegativeButton("Close", null)
-            .show()
+            }.setNegativeButton("Close", null).show()
     }
 
-    override fun onDestroy() {
-        executor.shutdownNow()
-        super.onDestroy()
-    }
+    override fun onDestroy() { executor.shutdownNow(); super.onDestroy() }
 }

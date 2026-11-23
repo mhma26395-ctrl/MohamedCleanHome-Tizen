@@ -186,7 +186,10 @@ Important:
                     lines += when (sdb.outcome) {
                         "CNXN" -> "Interpretation: protocol handshake response observed. Full session/authentication is not implemented."
                         "AUTH" -> "Interpretation: TV appears to request authentication; this build does not authenticate."
-                        "RESET" -> "Interpretation: peer reset the socket after the handshake attempt. Verify Developer Mode and protocol compatibility."\n                        "TIMEOUT" -> "Interpretation: no complete protocol reply arrived before timeout."\n                        "NO_RESPONSE" -> "Interpretation: connection opened, but no complete protocol header arrived."\n                        "INVALID_HEADER", "INVALID_LENGTH", "CHECKSUM_MISMATCH", "INCOMPLETE" -> "Interpretation: reply data was received but failed protocol validation."
+                        "RESET" -> "Interpretation: peer reset the socket after the handshake attempt. Verify Developer Mode and protocol compatibility."
+                        "TIMEOUT" -> "Interpretation: no complete protocol reply arrived before timeout."
+                        "NO_RESPONSE" -> "Interpretation: connection opened, but no complete protocol header arrived."
+                        "INVALID_HEADER", "INVALID_LENGTH", "CHECKSUM_MISMATCH", "INCOMPLETE" -> "Interpretation: reply data was received but failed protocol validation."
                         else -> "Interpretation: response is not yet verified as a usable SDB session."
                     }
                 } else {

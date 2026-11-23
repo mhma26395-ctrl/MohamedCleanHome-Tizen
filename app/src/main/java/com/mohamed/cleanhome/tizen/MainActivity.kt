@@ -77,6 +77,8 @@ class MainActivity : Activity() {
         connection.addView(setupButton)
         val samsungButton = Button(this).apply { text = "Check Samsung control ports"; setOnClickListener { samsungPorts() } }
         connection.addView(samsungButton)
+        val wsButton = Button(this).apply { text = "Test Samsung WebSocket control (8001)"; setOnClickListener { websocketProbe() } }
+        connection.addView(wsButton)
         status = label("Status: Ready", 15f, textColor, true)
         status.setPadding(0,dp(12),0,dp(4))
         connection.addView(status)

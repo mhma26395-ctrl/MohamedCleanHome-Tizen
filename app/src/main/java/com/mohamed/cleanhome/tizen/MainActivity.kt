@@ -149,7 +149,27 @@ Important:
             .setMessage(guide).setPositiveButton("Close", null).show()
     }
 
-    private fun samsungPorts() {\n        val host = ipField.text.toString().trim()\n        if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }\n        status.text = "Status: Checking Samsung endpoints…"\n        log.text = "Testing common Samsung TV control ports."\n        executor.execute {\n            val ports = listOf(8001, 8002, 7676, 26101)\n            val lines = ports.map { port ->\n                val result = try { Socket().use { it.connect(InetSocketAddress(host, port), 1800); "OPEN" } } catch (e: Exception) { "closed/unconfirmed" }\n                "$port: $result"\n            }\n            runOnUiThread { status.text = "Status: Endpoint scan complete"; log.text = "Samsung endpoint scan\\n${lines.joinToString("\\n")}\\nPorts alone do not prove control compatibility." }\n        }\n    }\n\n    private fun capabilityProbe() {
+    private fun samsungPorts() {
+        val host = ipField.text.toString().trim()
+        if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
+        status.text = "Status: Checking Samsung endpoints…"
+        log.text = "Testing common Samsung TV control ports."
+        executor.execute {
+            val ports = listOf(8001, 8002, 7676, 26101)
+            val lines = ports.map { port ->
+                val result = try {
+                    Socket().use { it.connect(InetSocketAddress(host, port), 1800); "OPEN" }
+                } catch (e: Exception) { "closed/unconfirmed" }
+                "$port: $result"
+            }
+            runOnUiThread {
+                status.text = "Status: Endpoint scan complete"
+                log.text = "Samsung endpoint scan\n" + lines.joinToString("\n") + "\nPorts alone do not prove control compatibility."
+            }
+        }
+    }
+
+    private fun capabilityProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         status.text = "Status: Reading read-only capabilities…"

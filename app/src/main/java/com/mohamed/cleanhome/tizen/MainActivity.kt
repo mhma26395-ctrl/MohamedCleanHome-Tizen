@@ -66,6 +66,11 @@ class MainActivity : Activity() {
         connection.addView(ipField)
         probeButton = Button(this).apply { text = "Run connection checks"; setOnClickListener { probe() } }
         connection.addView(probeButton)
+        val setupButton = Button(this).apply {
+            text = "Samsung TV developer-mode setup"
+            setOnClickListener { showDeveloperSetup() }
+        }
+        connection.addView(setupButton)
         status = label("Status: Ready", 15f, textColor, true)
         status.setPadding(0,dp(12),0,dp(4))
         connection.addView(status)
@@ -116,6 +121,27 @@ class MainActivity : Activity() {
         parent.addView(button)
     }
 
+    private fun showDeveloperSetup() {
+        val guide = """SAMSUNG TV — DEVELOPER MODE CHECKLIST
+
+1. TV and phone should be on the same local Wi-Fi/LAN.
+2. On the Samsung TV, open Apps.
+3. In Apps, open App Settings (location varies by model).
+4. Enter the developer-mode activation sequence where supported.
+5. Turn Developer Mode ON.
+6. Enter the PHONE's IP address as the developer/host IP if the TV asks for it.
+7. Confirm and reboot the TV.
+8. After reboot, run the connection checks again.
+
+Important:
+• The TV may not expose SDB on every model/firmware.
+• Network reachability is not proof of SDB support.
+• Do not enter a different host IP by mistake.
+• This app currently performs a diagnostic handshake only; it does not pair/authenticate or change TV settings."""
+        AlertDialog.Builder(this).setTitle("Developer Mode setup")
+            .setMessage(guide).setPositiveButton("Close", null).show()
+    }
+
     private fun sdbProbe() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
@@ -136,9 +162,9 @@ class MainActivity : Activity() {
         val host = ipField.text.toString().trim()
         if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
         probeButton.isEnabled = false
-        status.text = "Status: Checking…"
+        status.text = "Status: Checking network and SDB…"
         getSharedPreferences("cleanhome", MODE_PRIVATE).edit().putString("last_ip", host).apply()
-        log.text = "Checking $host…"
+        log.text = "Testing host and protocol…"
         executor.execute {
             val lines = mutableListOf<String>()
             try {
@@ -147,14 +173,33 @@ class MainActivity : Activity() {
                 try { lines += "Basic reachability: ${address.isReachable(2500)} (not definitive)" }
                 catch (e: Exception) { lines += "Reachability check: ${e.javaClass.simpleName}" }
                 var portOpen = false
-                try { Socket().use { it.connect(InetSocketAddress(address, 26101), 2500); portOpen = true }; lines += "TCP 26101: connection accepted" }
-                catch (e: Exception) { lines += "TCP 26101: not confirmed (${e.javaClass.simpleName})" }
-                lines += if (portOpen) "A TCP connection was accepted; this does not confirm SDB protocol support." else "No TCP connection was confirmed. Network/protocol status remains unknown."
-                lines += "No pairing, SDB commands, settings reads, or writes were attempted."
-            } catch (e: Exception) { lines += "Host check failed: ${e.javaClass.simpleName}: ${e.message ?: "no details"}" }
-            val result = lines.joinToString("\n")
+                try {
+                    Socket().use { it.connect(InetSocketAddress(address, 26101), 2500); portOpen = true }
+                    lines += "TCP 26101: connection accepted"
+                } catch (e: Exception) {
+                    lines += "TCP 26101: not confirmed (${e.javaClass.simpleName})"
+                }
+                if (portOpen) {
+                    val sdb = SdbHandshakeProbe.probe(host, 3500)
+                    lines += "SDB handshake result: ${sdb.outcome}"
+                    lines += sdb.detail
+                    lines += when (sdb.outcome) {
+                        "CNXN" -> "Interpretation: protocol handshake response observed. Full session/authentication is not implemented."
+                        "AUTH" -> "Interpretation: TV appears to request authentication; this build does not authenticate."
+                        "NO_RESPONSE", "FAILED" -> "Interpretation: TCP access may exist, but protocol response was not established. Check Developer Mode/host IP and model/firmware support."
+                        else -> "Interpretation: response is not yet verified as a usable SDB session."
+                    }
+                } else {
+                    lines += "SDB handshake skipped because TCP port 26101 was not confirmed."
+                    lines += "Check Developer Mode, host IP entered on TV, reboot, network isolation, and model/firmware."
+                }
+                lines += "No authentication, session commands, settings reads, or writes were attempted."
+            } catch (e: Exception) {
+                lines += "Host check failed: ${e.javaClass.simpleName}: ${e.message ?: "no details"}"
+            }
+            val result = lines.joinToString("\\n")
             runOnUiThread {
-                status.text = "Status: Checks complete — no TV session established"
+                status.text = "Status: Diagnostics complete"
                 log.text = result
                 probeButton.isEnabled = true
             }

@@ -90,6 +90,11 @@ class MainActivity : Activity() {
             setOnClickListener { sdbProbe() }
         }
         tools.addView(sdbButton)
+        val capabilityButton = Button(this).apply {
+            text = "Read TV capabilities (read-only)"
+            setOnClickListener { capabilityProbe() }
+        }
+        tools.addView(capabilityButton)
         profileButtonSetup(tools)
         root.addView(tools); addGap(root)
 
@@ -140,6 +145,20 @@ Important:
 • This app currently performs a diagnostic handshake only; it does not pair/authenticate or change TV settings."""
         AlertDialog.Builder(this).setTitle("Developer Mode setup")
             .setMessage(guide).setPositiveButton("Close", null).show()
+    }
+
+    private fun capabilityProbe() {
+        val host = ipField.text.toString().trim()
+        if (host.isBlank()) { status.text = "Status: Enter the TV IP address"; return }
+        status.text = "Status: Reading read-only capabilities…"
+        log.text = "Opening only the SDB capability service."
+        executor.execute {
+            val result = SdbHandshakeProbe.readCapabilities(host)
+            runOnUiThread {
+                status.text = "Status: Capability probe ${result.outcome}"
+                log.text = "Read-only diagnostic\n${result.detail}\nNo settings or Home configuration were changed."
+            }
+        }
     }
 
     private fun sdbProbe() {
